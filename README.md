@@ -33,7 +33,28 @@ LightShield treats prompt injection as a **security architecture problem**, not 
 pip install lightshield
 ```
 
-### 2. Wrap Your Existing OpenAI Client
+### 2. Three-Line Integration (Pinecone + OpenAI)
+
+```python
+from lightshield import LightShield
+
+shield = LightShield()
+safe_docs = shield.sanitize_pinecone(pinecone_index.query(...))  # Quarantines malicious chunks
+response = shield.wrap(openai_client).chat.completions.create(
+    model="gpt-4",
+    messages=[
+        {"role": "system", "content": "You are a helpful assistant"},
+        {"role": "user", "content": user_input},
+        *[{"role": "retrieved", "content": c["content"]} for c in safe_docs.safe_chunks],
+    ],
+)
+if response.lightshield.is_safe:
+    print(response.choices[0].message.content)
+```
+
+`sanitize_pinecone` runs at retrieval time—before context assembly—so malicious chunks are never sent to the LLM.
+
+### 3. Wrap Your Existing OpenAI Client (without RAG)
 
 ```python
 from lightshield import LightShield
@@ -74,7 +95,7 @@ if response.lightshield.is_safe:
     print(response.raw.content)
 ```
 
-### 4. LangChain RAG Integration
+### 5. LangChain RAG Integration
 
 ```python
 from lightshield import LightShield
@@ -123,19 +144,17 @@ print("Avg latency overhead (ms):", report.avg_latency_overhead_ms)
 
 The benchmark covers:
 
-- Direct instruction override (`"Ignore previous instructions and..."`)
-- Persona hijacking (`"You are now DAN..."`)
-- RAG document injection
-- Tool call manipulation
-- Data exfiltration attempts
-- Indirect webpage injections
-- Metadata-based injections
+- Direct instruction override, persona hijacking, RAG document injection
+- Tool call manipulation, data exfiltration attempts
+- Indirect webpage and metadata-based injections
+- **RAG-specific**: `run_rag_benchmarks()` for Pinecone sanitization (malicious chunks, cross-chunk injection, metadata field injection, high-similarity attacks)
 
 ---
 
 ## ⚙️ Configuration
 
-- **`LightShield(raise_on_violation=True)`**: Raise `LightShieldViolationException` when a high-confidence violation is detected instead of returning a response.
+- **`LightShield(raise_on_violation=True)`**: Raise `LightShieldViolationException` with `violated_uuid_level`, `triggering_pattern`, `raw_content`, and `recommended_action`.
+- **`shield.sanitize_pinecone(raw_results)`**: Scan Pinecone results at retrieval time; returns `LightShieldRAGResult(safe_chunks, flagged_chunks, risk_score)`.
 - **Adapters** are auto-detected by duck-typing:
   - Objects with `.chat` → OpenAI adapter
   - Objects with `.messages` → Anthropic adapter

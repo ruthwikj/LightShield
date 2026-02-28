@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from ..core.encapsulator import Message, prepare_encapsulated_messages
+from ..core.hierarchy import TrustLevel
 from ..core.uuid_engine import SessionUUIDEngine
 from ..exceptions import LightShieldViolationException
 from ..validators.output_validator import ValidationResult, validate_response
@@ -43,12 +44,32 @@ class _MessagesProxy:
         raw_response = self._client.create(*args, **kwargs)
         validation = self._adapter._validate(raw_response, messages, encapsulated, engine)
         if self._adapter.raise_on_violation and not validation.is_safe:
+            content = _extract_anthropic_content(raw_response)
             raise LightShieldViolationException(
                 message="LightShield detected an unsafe response.",
                 violations=validation.violations,
                 confidence=validation.confidence,
+                violated_uuid_level=TrustLevel.USER,
+                triggering_pattern=validation.violations[0] if validation.violations else None,
+                raw_content=content[:500] if content else None,
+                recommended_action="Review response content and input messages for injection attempts.",
             )
         return LightShieldResponse(raw=raw_response, lightshield=validation)
+
+
+def _extract_anthropic_content(response: Any) -> str:
+    """Extract text from Anthropic API response."""
+    try:
+        if hasattr(response, "content"):
+            parts = []
+            for b in (response.content or []):
+                t = getattr(b, "text", None) if hasattr(b, "text") else (b.get("text") if isinstance(b, dict) else None)
+                if isinstance(t, str):
+                    parts.append(t)
+            return "\n".join(parts)
+    except Exception:
+        pass
+    return str(response)
 
 
 class AnthropicAdapter:

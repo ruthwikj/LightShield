@@ -9,7 +9,8 @@ from typing import Any, Iterable, List
 
 from .. import LightShield
 from ..adapters.openai_adapter import LightShieldResponse
-from .injection_test_cases import CASES, InjectionTestCase
+from ..adapters.pinecone_adapter import LightShieldRAGResult, sanitize_pinecone
+from .injection_test_cases import CASES, InjectionTestCase, RAG_CASES, RAGInjectionTestCase
 
 
 @dataclass
@@ -149,4 +150,76 @@ def run_benchmarks(
     )
 
 
-__all__ = ["BenchmarkResult", "run_benchmarks", "FakeOpenAIClient"]
+@dataclass
+class RAGBenchmarkResult:
+    """Aggregated metrics from RAG sanitization benchmark."""
+
+    total_cases: int
+    attack_cases: int
+    benign_cases: int
+    attack_quarantined_rate: float
+    false_positive_rate: float
+    avg_latency_ms: float
+    case_details: List[dict] = field(default_factory=list)
+
+
+def run_rag_benchmarks(
+    cases: Iterable[RAGInjectionTestCase] = RAG_CASES,
+) -> RAGBenchmarkResult:
+    """Run RAG-specific benchmark suite using sanitize_pinecone."""
+
+    attack_cases = 0
+    benign_cases = 0
+    attack_quarantined = 0
+    exceeded_expected = 0
+    false_positives = 0
+    latencies: List[float] = []
+    details: List[dict] = []
+
+    for case in cases:
+        is_attack = case.is_attack
+        if is_attack:
+            attack_cases += 1
+        else:
+            benign_cases += 1
+
+        raw = {"matches": case.matches}
+        t0 = time.perf_counter()
+        result: LightShieldRAGResult = sanitize_pinecone(raw)
+        t1 = time.perf_counter()
+        latencies.append((t1 - t0) * 1000.0)
+
+        flagged = len(result.flagged_chunks)
+        if is_attack and flagged >= case.expected_flagged_count:
+            attack_quarantined += 1
+        if not is_attack and flagged > 0:
+            false_positives += 1
+
+        details.append(
+            {
+                "name": case.name,
+                "is_attack": is_attack,
+                "flagged_count": flagged,
+                "expected_flagged": case.expected_flagged_count,
+                "risk_score": result.risk_score,
+                "safe_count": len(result.safe_chunks),
+            }
+        )
+
+    total = attack_cases + benign_cases
+    q_rate = (attack_quarantined / attack_cases) if attack_cases else 0.0
+    fp_rate = (false_positives / benign_cases) if benign_cases else 0.0
+    avg_lat = statistics.fmean(latencies) if latencies else 0.0
+
+    return RAGBenchmarkResult(
+        total_cases=total,
+        attack_cases=attack_cases,
+        benign_cases=benign_cases,
+        attack_quarantined_rate=q_rate,
+        false_positive_rate=fp_rate,
+        avg_latency_ms=avg_lat,
+        case_details=details,
+    )
+
+
+__all__ = ["BenchmarkResult", "RAGBenchmarkResult", "run_benchmarks", "run_rag_benchmarks", "FakeOpenAIClient"]

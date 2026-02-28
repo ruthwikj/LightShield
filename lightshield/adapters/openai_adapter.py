@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from typing import Any, Dict, List
 
 from ..core.encapsulator import Message, prepare_encapsulated_messages
+from ..core.hierarchy import TrustLevel
 from ..core.uuid_engine import SessionUUIDEngine
 from ..exceptions import LightShieldViolationException
 from ..validators.output_validator import ValidationResult, validate_response
@@ -43,12 +44,28 @@ class _ChatCompletionsProxy:
         raw_response = self._client.create(*args, **kwargs)
         validation = self._adapter._validate(raw_response, messages, encapsulated, engine)
         if self._adapter.raise_on_violation and not validation.is_safe:
+            content = _extract_content(raw_response)
             raise LightShieldViolationException(
                 message="LightShield detected an unsafe response.",
                 violations=validation.violations,
                 confidence=validation.confidence,
+                violated_uuid_level=TrustLevel.USER,
+                triggering_pattern=validation.violations[0] if validation.violations else None,
+                raw_content=content[:500] if content else None,
+                recommended_action="Review response content and input messages for injection attempts.",
             )
         return LightShieldResponse(raw=raw_response, lightshield=validation)
+
+
+def _extract_content(response: Any) -> str:
+    """Extract text content from an LLM response."""
+    try:
+        if hasattr(response, "choices") and response.choices:
+            msg = response.choices[0].message if hasattr(response.choices[0], "message") else getattr(response.choices[0], "delta", None)
+            return str(getattr(msg, "content", "") or "")
+    except Exception:
+        pass
+    return str(response)
 
 
 class _ChatProxy:

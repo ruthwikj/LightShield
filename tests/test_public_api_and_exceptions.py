@@ -46,3 +46,20 @@ def test_lightshield_violation_exception_str_contains_details() -> None:
     assert "Violation" in text
     assert "rule1" in text
     assert "0.95" in text
+
+
+def test_lightshield_violation_exception_full_fields() -> None:
+    from lightshield.core.hierarchy import TrustLevel
+    exc = LightShieldViolationException(
+        message="RAG quarantine",
+        violations=["rag_quarantine:c1"],
+        confidence=0.9,
+        violated_uuid_level=TrustLevel.RETRIEVED,
+        triggering_pattern="ignore previous instructions",
+        raw_content="preview...",
+        recommended_action="Review flagged_chunks.",
+    )
+    assert exc.violated_uuid_level == TrustLevel.RETRIEVED
+    assert exc.triggering_pattern == "ignore previous instructions"
+    assert exc.raw_content == "preview..."
+    assert exc.recommended_action == "Review flagged_chunks."

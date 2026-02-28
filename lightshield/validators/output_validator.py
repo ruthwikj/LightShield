@@ -43,6 +43,17 @@ def _extract_text_from_response(response: Any) -> str:
         except Exception:  # pragma: no cover - defensive
             pass
 
+    # Anthropic-style responses (content: list of ContentBlock)
+    if hasattr(response, "content") and isinstance(response.content, Sequence):
+        parts: List[str] = []
+        for block in response.content:
+            if hasattr(block, "text") and isinstance(block.text, str):
+                parts.append(block.text)
+            elif isinstance(block, dict) and isinstance(block.get("text"), str):
+                parts.append(block["text"])
+        if parts:
+            return "\n".join(parts)
+
     # Dict-style responses
     if isinstance(response, dict):
         choices = response.get("choices")
@@ -52,6 +63,13 @@ def _extract_text_from_response(response: Any) -> str:
                 content = msg.get("content")
                 if isinstance(content, str):
                     return content
+        content_blocks = response.get("content")
+        if isinstance(content_blocks, Sequence):
+            for block in content_blocks:
+                if isinstance(block, dict) and isinstance(block.get("text"), str):
+                    return block["text"]
+                if hasattr(block, "text"):
+                    return str(block.text)
 
     # Fallback to string conversion
     return str(response)
