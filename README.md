@@ -28,8 +28,3 @@ Instructional Lockdown: LightShield injects a high-priority "Boundary Rule" into
 🛡️ Blast Radius Control: Prevents "Agentic Hijacking" by ensuring data can never be promoted to a command.
 
 🧩 Framework Agnostic: One-line integration for LangChain, AutoGen, CrewAI, or raw OpenAI/Anthropic SDKs.
-
-# 4. (Optional) Validate Output
-response = llm.call(system_instructions + secure_prompt)
-if not shield.validate_output(response):
-    raise SecurityException("Boundary violation detected!")
