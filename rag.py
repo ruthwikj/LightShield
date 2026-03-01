@@ -18,6 +18,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
+from lightshield import RagShield
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
@@ -43,11 +44,9 @@ INSTRUCTIONS:
 - If the context does not contain enough information to answer, say: "I don't have enough information in my knowledge base to answer that question."
 - Be concise and accurate. Cite specific details from the context when possible.
 - Do not make up information or use knowledge outside the provided context.
-- If the context is partially relevant, answer what you can and note what's missing.
+- If the context is partially relevant, answer what you can and note what's missing."""
 
-CONTEXT:
-{context}
-"""
+rag_shield = RagShield()
 
 # ─── Initialize Clients ─────────────────────────────────────────────────────
 
@@ -146,19 +145,20 @@ def ask(index, question: str, top_k=TOP_K) -> str:
     if not docs:
         return "No relevant documents found in the knowledge base."
 
-    # 2. Build context
-    context = "\n\n---\n\n".join(
+    # 2. Build context chunks
+    context_chunks = [
         f"[Source: {d['source']} | Relevance: {d['score']:.2f}]\n{d['text']}" for d in docs
-    )
-
-    # 3. Generate
-    messages = [
-        {"role": "system", "content": SYSTEM_PROMPT.format(context=context)},
-        {"role": "user", "content": question},
     ]
+
+    # 3. Generate with LightShield protection
+    messages, sanitizer = rag_shield.prepare(
+        system=SYSTEM_PROMPT,
+        context=context_chunks,
+        query=question,
+    )
     resp = openai_client.chat.completions.create(
         model=CHAT_MODEL, messages=messages, temperature=0.2)
-    answer = resp.choices[0].message.content
+    answer = sanitizer(resp.choices[0].message.content)
 
     return answer
 
