@@ -1,30 +1,63 @@
 # LightShield
-## 🛡️ LightShield
-Near-zero latency, CPU-only structural firewall for LLM applications.
 
-LightShield is a lightweight security middleware that prevents prompt injection by enforcing Strict Instruction Hierarchies. Unlike traditional guardrails that use expensive LLM calls to "guess" if an input is malicious, LightShield uses Per-Session UUID Encapsulation to make unauthorized command execution structurally impossible.
+LightShield is a lightweight Python middleware that reduces prompt injection risk by tagging system and user content and enforcing a strict instruction hierarchy before prompts are sent to an LLM. It does not modify model weights or call a separate classifier—only prompt construction and response sanitization.
 
-## 🚀 The Problem
-In 2026, Large Language Models (LLMs) still struggle to distinguish between Developer Instructions and Untrusted Data.
+## Install
 
-The "Parser Confusion" Attack: Attackers use fake closing tags (e.g., </user_input>) to "escape" their data container and issue new system commands.
+```bash
+pip install ollama   # required for the Ollama shield
+```
 
-The Latency Trap: Current solutions (like NeMo or Llama Guard) add 200ms–500ms of latency per request, making them unusable for real-time agentic workflows.
+Clone or install the LightShield package so you can import it.
 
-## 💡 The Core Innovation: UUID Encapsulation
-LightShield treats prompt injection as a Security Architecture problem, not a content moderation problem.
+## Use (Ollama)
 
-Cryptographic Delimiters: Every input (user messages, RAG documents, tool outputs) is wrapped in a session-unique UUID tag (e.g., <LS_77a2>).
+1. **Import and create a shield**
 
-Structural Anchoring: Because the UUID is generated at runtime and unknown to the attacker, they cannot pre-craft an "escape sequence."
+   Choose the engine (e.g. `"ollama"`). The shield wraps that backend so every chat call is tagged and responses are sanitized.
 
-Instructional Lockdown: LightShield injects a high-priority "Boundary Rule" into the system prompt that anchors the LLM's attention to these specific UUID tokens.
+   ```python
+   from lightshield import Shield
 
-## ✨ Features
-⚡ Microsecond Latency: Runs on the CPU using optimized string-wrapping and regex. No GPU or extra LLM calls required.
+   shield = Shield()
+   ```
 
-🔒 RAG-Hardened: Specifically designed for "Indirect Injection" where malicious instructions are hidden in retrieved PDFs or websites.
+2. **Call chat**
 
-🛡️ Blast Radius Control: Prevents "Agentic Hijacking" by ensuring data can never be promoted to a command.
+   Pass the same `model` and `messages` you would use with Ollama. Use standard `role` and `content` keys. LightShield uses system and user messages only (RAG/retrieved layers are for a later release).
 
-🧩 Framework Agnostic: One-line integration for LangChain, AutoGen, CrewAI, or raw OpenAI/Anthropic SDKs.
+   ```python
+   response = shield.chat(
+       model="qwen2.5",
+       messages=[
+           {"role": "system", "content": "You are a helpful assistant."},
+           {"role": "user", "content": "What is 2+2?"},
+       ],
+   )
+   ```
+
+3. **Read the response**
+
+   The returned object has the same shape as Ollama’s response. The message content is sanitized so internal LightShield tags are not exposed.
+
+   ```python
+   print(response["message"]["content"])
+   ```
+
+4. **Other Ollama features**
+
+   Other calls are passed through to the underlying backend (e.g. `shield.list()`, `shield.pull("qwen2.5")`). Only `chat()` is wrapped and sanitized. Streaming is disabled so that responses can be sanitized reliably.
+
+## What LightShield does
+
+- **Before the call:** Builds a system message that includes an authority/hierarchy paragraph and wraps your system and user text in unique tags so the model sees clear boundaries and priorities (system over user).
+- **After the call:** Strips those tags from the model’s reply so they never reach your application.
+
+## Building blocks (advanced)
+
+If you want to plug LightShield into another API or build your own flow, you can use the lower-level pieces:
+
+- **`LayerPrompt`** — Creates one tag per layer (system, user, retrieved) and returns `authority_text()` plus a `tags` dict. Use `tags["system"].wrap(...)` and `tags["user"].wrap(...)` to build the strings you send.
+- **`Tag`** — Single tag with `short_id` and `wrap(content)` for `<LS_id>content</LS_id>`.
+
+You would then call your own LLM with the wrapped prompts and implement sanitization (strip `<LS_*>` and `</LS_*>`) using the same tag ids from that `LayerPrompt` instance.

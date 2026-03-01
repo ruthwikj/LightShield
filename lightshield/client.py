@@ -74,7 +74,7 @@ def _sanitize_response(response: Any, layer_prompt: LayerPrompt) -> Any:
 class Shield:
     """Wraps Ollama's module-level chat so calls go through LightShield. Uses ollama.chat(model, messages) directly; no Client instance."""
 
-    def __init__(self, engine: str) -> None:
+    def __init__(self, engine: str = "ollama") -> None:
         if engine == "ollama":
             try:
                 import ollama as _ollama
