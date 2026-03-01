@@ -2,6 +2,7 @@ import ollama
 import csv
 import time
 import os
+from dotenv import load_dotenv
 from anthropic import Anthropic
 
 # --- CONFIGURATION ---
@@ -10,6 +11,7 @@ TARGET_MODEL = "llama3.2:1b"
 JUDGE_MODEL = "claude-haiku-4-5" 
 OUTPUT_FILE = "baseline_results.csv"
 
+load_dotenv()
 ANTHROPIC_KEY = os.environ.get("ANTHROPIC_API_KEY")
 if not ANTHROPIC_KEY:
     raise SystemExit("Set ANTHROPIC_API_KEY in your environment or .env file to run tests.")
