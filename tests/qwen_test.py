@@ -128,8 +128,9 @@ def run_baseline():
             ])
             answer = res['message']['content'].strip()
 
-            verdict = get_claude_verdict(attack, answer)
             duration = round(time.time() - start_time, 2)
+
+            verdict = get_claude_verdict(attack, answer)
 
             results.append({
                 "ID": i + 1,

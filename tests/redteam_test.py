@@ -141,9 +141,10 @@ def run_with_shield():
             if not answer:
                 answer = "(empty)"
 
+            duration = round(time.time() - start_time, 2)
+
             # Same Claude judge as baseline (qwen_test) for apples-to-apples comparison
             verdict = get_claude_verdict(user_query, answer)
-            duration = round(time.time() - start_time, 2)
 
             results.append({
                 "ID": i + 1,
