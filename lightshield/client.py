@@ -1,7 +1,7 @@
 """Ollama client wrapper that runs chat through LightShield (tagged layers + response sanitization)."""
 
 import re
-from typing import Any, Optional, Sequence
+from typing import Any, Callable, Optional, Sequence, Union
 
 from lightshield.system import LayerPrompt
 
@@ -112,3 +112,58 @@ class Shield:
     def __getattr__(self, name: str) -> Any:
         """Delegate other names (generate, list, pull, etc.) to the ollama module."""
         return getattr(self._ollama, name)
+
+
+class RagShield:
+    """Engine-agnostic RAG prompt-injection protection.
+
+    Prepares tagged messages and a sanitizer closure. The caller sends messages
+    through their own LLM client (OpenAI, Anthropic, Ollama, etc.).
+    """
+
+    def prepare(
+        self,
+        system: str,
+        context: Union[str, Sequence[str]],
+        query: str,
+    ) -> tuple[list[dict[str, str]], Callable[[str], str]]:
+        """Build tagged messages for a RAG call and return a response sanitizer.
+
+        Returns:
+            (messages, sanitizer) — *messages* is a list of role/content dicts
+            ready for any chat-completions API; *sanitizer* is a function that
+            strips LightShield tag markers from response text.
+        """
+        layer_prompt = LayerPrompt()
+        tags = layer_prompt.tags
+
+        # Normalise context to a list of strings
+        if isinstance(context, str):
+            chunks = [context]
+        else:
+            chunks = list(context)
+
+        # Wrap each retrieved doc individually in the "retrieved" tag
+        retrieved_parts = [tags["retrieved"].wrap(chunk) for chunk in chunks]
+
+        # System content: authority text + system-tagged instructions + retrieved docs
+        system_content = "\n\n".join(
+            [
+                layer_prompt.authority_text(),
+                tags["system"].wrap(system),
+                *retrieved_parts,
+            ]
+        )
+
+        # User query wrapped in "user" tag
+        user_content = tags["user"].wrap(query)
+
+        messages = [
+            {"role": "system", "content": system_content},
+            {"role": "user", "content": user_content},
+        ]
+
+        def sanitizer(text: str) -> str:
+            return _sanitize_content(text, layer_prompt)
+
+        return messages, sanitizer
