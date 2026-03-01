@@ -30,13 +30,11 @@ def _parse_messages(messages: Optional[Sequence[Any]]) -> tuple[str, str]:
 
 
 def _assemble_system_content(layer_prompt: LayerPrompt, system_content: str) -> str:
-    """Build the system message: authority + wrapped system layer. User is sent as a separate message. RAG/retrieved handled later via a separate mechanism."""
+    """Build the system message: define tag behavior first (untagged), then the SYSTEM layer content in its tag. No tag is used before the model knows what tags mean."""
     tags = layer_prompt.tags
-    parts = [
-        layer_prompt.authority_text(),
-        tags["system"].wrap(system_content or ""),
-    ]
-    return "\n\n".join(parts)
+    authority = layer_prompt.authority_text()
+    system_block = tags["system"].wrap(system_content or "")
+    return authority + "\n\n" + system_block
 
 
 def _sanitize_content(content: str, layer_prompt: LayerPrompt) -> str:
