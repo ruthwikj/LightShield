@@ -1,3 +1,6 @@
 # Core (no LLM client required for encapsulation + system modules)
 # For ShieldedOllama client wrapper:
 ollama>=0.3.0
+
+# Tests (Anthropic judge / API)
+anthropic>=0.39.0
