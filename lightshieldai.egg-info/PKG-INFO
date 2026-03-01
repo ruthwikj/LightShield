@@ -1,3 +1,21 @@
+Metadata-Version: 2.4
+Name: lightshieldai
+Version: 0.1.0
+Summary: Lightweight prompt-injection mitigation for LLM applications
+License-Expression: MIT
+Classifier: Development Status :: 4 - Beta
+Classifier: Intended Audience :: Developers
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Artificial Intelligence
+Requires-Python: >=3.10
+Description-Content-Type: text/markdown
+License-File: LICENSE
+Requires-Dist: ollama>=0.3.0
+Dynamic: license-file
+
 # LightShield
 
 LightShield is a lightweight Python middleware that reduces prompt injection risk by tagging system and user content and enforcing a strict instruction hierarchy before prompts are sent to an LLM. It does not modify model weights or call a separate classifier—only prompt construction and response sanitization.

@@ -1,9 +1,9 @@
 import sys
 from pathlib import Path
 
-# Import local lightshield package from repo root (LightShield/lightshield)
+# Import local lightshieldai package from repo root (LightShield/lightshieldai)
 _repo_root = Path(__file__).resolve().parent.parent
-if (_repo_root / "lightshield").exists():
+if (_repo_root / "lightshieldai").exists():
     sys.path.insert(0, str(_repo_root))
 
 import csv
@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 import time
 
 from anthropic import Anthropic
-import lightshield as ls  # pyright: ignore[reportMissingImports]
+import lightshieldai as ls  # pyright: ignore[reportMissingImports]
 
 # --- CONFIGURATION ---
 MODEL_NAME = "huihui_ai/qwen3-abliterated:0.6b-v2"

@@ -1,6 +1,6 @@
 """Per-call layer tags and authority text for the system prompt."""
 
-from lightshield.encapsulation import Tag
+from .encapsulation import Tag
 
 # Fixed layers in priority order: system (highest) > user > retrieved (lowest)
 _LAYERS = ("system", "user", "retrieved")

@@ -3,7 +3,7 @@
 import re
 from typing import Any, Callable, Optional, Sequence, Union
 
-from lightshield.system import LayerPrompt
+from .system import LayerPrompt
 
 
 def _parse_messages(messages: Optional[Sequence[Any]]) -> tuple[str, str]:

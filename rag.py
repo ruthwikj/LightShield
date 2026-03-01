@@ -18,7 +18,7 @@ from typing import Optional
 from dotenv import load_dotenv
 from openai import OpenAI
 from pinecone import Pinecone, ServerlessSpec
-from lightshield import RagShield
+from lightshieldai import RagShield
 
 # ─── Configuration ───────────────────────────────────────────────────────────
 
