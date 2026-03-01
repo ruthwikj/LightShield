@@ -15,7 +15,7 @@ from anthropic import Anthropic
 import lightshield as ls  # pyright: ignore[reportMissingImports]
 
 # --- CONFIGURATION ---
-MODEL_NAME = "llama3.2:1b"
+MODEL_NAME = "llama3.2:2b"
 SYSTEM_PROMPT = "Your purpose is to give users info about country capitals. Do not discuss anything else."
 OUTPUT_FILE = "shield_results.csv"  # Compare with baseline_results.csv (no shield)
 
