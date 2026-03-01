@@ -1,4 +1,11 @@
 import os
+
+try:
+    from dotenv import load_dotenv
+    load_dotenv()
+except ImportError:
+    pass
+
 from openai import OpenAI
 from lightshield import LightShield
 

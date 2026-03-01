@@ -1,0 +1,2 @@
+# Local env (contains secrets)
+.env
