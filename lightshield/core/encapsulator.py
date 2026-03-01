@@ -110,8 +110,60 @@ def prepare_encapsulated_messages(
                 "content": synthetic_content,
             },
         )
+    print(encapsulated)
 
     return encapsulated, engine
 
 
-__all__ = ["Message", "build_system_prompt_with_trust_map", "prepare_encapsulated_messages"]
+def prepare_prompt(
+    system: str,
+    user: str,
+    retrieved: Optional[str] = None,
+    tool: Optional[str] = None,
+    engine: Optional[SessionUUIDEngine] = None,
+) -> Tuple[str, SessionUUIDEngine]:
+    """Build a single encapsulated prompt string for raw HTTP APIs (e.g. Ollama).
+
+    Accepts plain strings and returns a plain string prompt usable with any
+    model endpoint. Use with :func:`validate_string` for the full flow.
+
+    Parameters
+    ----------
+    system:
+        System prompt (Level 1).
+    user:
+        User input (Level 2).
+    retrieved:
+        Optional retrieved/RAG content (Level 3).
+    tool:
+        Optional tool output (Level 4).
+    engine:
+        Optional engine to reuse; creates a fresh one if omitted.
+
+    Returns
+    -------
+    tuple
+        (prompt_string, engine) — pass engine to validate_string for validation.
+    """
+
+    if engine is None:
+        engine = SessionUUIDEngine()
+
+    system_with_map = build_system_prompt_with_trust_map(system, engine)
+    parts: List[str] = []
+    parts.append(engine.encapsulate(system_with_map, TrustLevel.SYSTEM))
+    parts.append(engine.encapsulate(user, TrustLevel.USER))
+    if retrieved:
+        parts.append(engine.encapsulate(retrieved, TrustLevel.RETRIEVED))
+    if tool:
+        parts.append(engine.encapsulate(tool, TrustLevel.TOOL))
+
+    return "\n\n".join(parts), engine
+
+
+__all__ = [
+    "Message",
+    "build_system_prompt_with_trust_map",
+    "prepare_encapsulated_messages",
+    "prepare_prompt",
+]

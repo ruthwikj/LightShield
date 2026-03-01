@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Sequence
+from typing import Any, Dict, List, Optional, Sequence
 
 from ..core.uuid_engine import UUID_PREFIX, SessionUUIDEngine
 from .tool_tracer import detect_unauthorised_tool_calls
@@ -102,6 +102,50 @@ def _detect_uuid_bleed(content: str, engine: SessionUUIDEngine) -> List[str]:
     return violations
 
 
+def validate_string(
+    content: str,
+    engine: Optional[SessionUUIDEngine] = None,
+) -> ValidationResult:
+    """Validate a plain string response (e.g. from raw HTTP) against LightShield heuristics.
+
+    Use with :func:`prepare_prompt` — pass the engine returned by prepare_prompt
+    for consistent session metadata. Engine is optional; validation runs without
+    it but metadata will omit session_id.
+
+    Parameters
+    ----------
+    content:
+        The raw string response from the model.
+    engine:
+        Optional SessionUUIDEngine from prepare_prompt; used for metadata and
+        session consistency.
+
+    Returns
+    -------
+    ValidationResult
+        is_safe, violations, confidence, metadata.
+    """
+
+    consistency = _response_consistency_checks(content)
+    uuid_bleed = [f"uuid_bleed:{m}" for m in UUID_PATTERN.findall(content)]
+    anomalies = detect_behavioral_anomalies(content)
+    violations = consistency + uuid_bleed + anomalies
+
+    metadata: Dict[str, Any] = {}
+    if engine is not None:
+        metadata["session_id"] = engine.session_id
+
+    is_safe = not violations
+    confidence = 0.99 if is_safe else 0.9
+
+    return ValidationResult(
+        is_safe=is_safe,
+        violations=violations,
+        confidence=confidence,
+        metadata=metadata,
+    )
+
+
 def validate_response(
     response: Any,
     *,
@@ -162,4 +206,4 @@ def validate_response(
     )
 
 
-__all__ = ["ValidationResult", "validate_response"]
+__all__ = ["ValidationResult", "validate_response", "validate_string"]

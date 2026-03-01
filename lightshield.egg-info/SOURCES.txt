@@ -11,6 +11,7 @@ lightshield/adapters/__init__.py
 lightshield/adapters/anthropic_adapter.py
 lightshield/adapters/langchain_adapter.py
 lightshield/adapters/openai_adapter.py
+lightshield/adapters/pinecone_adapter.py
 lightshield/benchmarks/__init__.py
 lightshield/benchmarks/injection_test_cases.py
 lightshield/benchmarks/test_harness.py
@@ -21,8 +22,14 @@ lightshield/core/uuid_engine.py
 lightshield/validators/__init__.py
 lightshield/validators/anomaly_detector.py
 lightshield/validators/output_validator.py
+lightshield/validators/rag_chunk_scanner.py
 lightshield/validators/tool_tracer.py
 tests/test_adapters_and_benchmarks.py
 tests/test_core.py
+tests/test_ollama.py
+tests/test_pinecone_adapter.py
+tests/test_prepare_validate.py
 tests/test_public_api_and_exceptions.py
+tests/test_rag_benchmarks.py
+tests/test_rag_chunk_scanner.py
 tests/test_validators.py

@@ -8,7 +8,9 @@ from .adapters.anthropic_adapter import AnthropicAdapter
 from .adapters.langchain_adapter import LangChainAdapter
 from .adapters.openai_adapter import LightShieldAdapter
 from .adapters.pinecone_adapter import LightShieldRAGResult, sanitize_pinecone
+from .core.encapsulator import prepare_prompt
 from .core.uuid_engine import SessionUUIDEngine
+from .validators.output_validator import ValidationResult, validate_string
 
 
 class LightShield:
@@ -39,6 +41,64 @@ class LightShield:
         """
 
         self.raise_on_violation = raise_on_violation
+        self._last_engine: Optional[SessionUUIDEngine] = None
+
+    def prepare(
+        self,
+        system: str,
+        user: str,
+        retrieved: Optional[str] = None,
+        tool: Optional[str] = None,
+    ) -> str:
+        """Build an encapsulated prompt string for raw HTTP APIs (e.g. Ollama).
+
+        Plain string in, plain string out. Use with :meth:`validate` for the
+        full flow. The engine is stored for the next :meth:`validate` call.
+
+        Parameters
+        ----------
+        system:
+            System prompt (Level 1).
+        user:
+            User input (Level 2).
+        retrieved:
+            Optional retrieved/RAG content (Level 3).
+        tool:
+            Optional tool output (Level 4).
+
+        Returns
+        -------
+        str
+            Single prompt string with UUID encapsulation, ready for any model API.
+        """
+
+        prompt_str, engine = prepare_prompt(
+            system=system,
+            user=user,
+            retrieved=retrieved,
+            tool=tool,
+        )
+        self._last_engine = engine
+        return prompt_str
+
+    def validate(self, response: str) -> ValidationResult:
+        """Validate a plain string response from any model.
+
+        Use after :meth:`prepare` and a raw HTTP call. Works with any response
+        shape — pass the response text as a string.
+
+        Parameters
+        ----------
+        response:
+            Raw string response from the model.
+
+        Returns
+        -------
+        ValidationResult
+            is_safe, violations, confidence.
+        """
+
+        return validate_string(response, engine=self._last_engine)
 
     def sanitize_pinecone(
         self,
@@ -91,4 +151,11 @@ class LightShield:
         return LangChainAdapter(client)
 
 
-__all__ = ["LightShield", "LightShieldRAGResult", "sanitize_pinecone"]
+__all__ = [
+    "LightShield",
+    "LightShieldRAGResult",
+    "ValidationResult",
+    "prepare_prompt",
+    "validate_string",
+    "sanitize_pinecone",
+]

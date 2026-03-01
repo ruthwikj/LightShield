@@ -2,7 +2,12 @@
 
 from .hierarchy import TrustLevel, get_trust_level_for_role
 from .uuid_engine import SessionUUIDEngine, UUIDTag, UUID_PREFIX
-from .encapsulator import Message, build_system_prompt_with_trust_map, prepare_encapsulated_messages
+from .encapsulator import (
+    Message,
+    build_system_prompt_with_trust_map,
+    prepare_encapsulated_messages,
+    prepare_prompt,
+)
 
 __all__ = [
     "TrustLevel",
@@ -13,4 +18,5 @@ __all__ = [
     "Message",
     "build_system_prompt_with_trust_map",
     "prepare_encapsulated_messages",
+    "prepare_prompt",
 ]
