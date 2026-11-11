@@ -1,3 +1,5 @@
+Demo Link: https://youtu.be/5oVqwrsXozM
+
 # LightShield
 
 LightShield is a lightweight Python middleware that reduces prompt injection risk by tagging system and user content and enforcing a strict instruction hierarchy before prompts are sent to an LLM. It does not modify model weights or call a separate classifier—only prompt construction and response sanitization.
